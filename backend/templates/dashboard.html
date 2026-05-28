@@ -373,8 +373,7 @@
     </header>
 
     <div class="alert-banner" id="alert-banner">
-      🚨 FUEL THEFT ALERT - Demo vehicle - Siphoning while parked - Owner
-      notified via SMS
+      🚨 FUEL THEFT ALERT - Siphoning detected on vehicle - Owner notified via Africa's Talking SMS
     </div>
 
     <main>
@@ -421,7 +420,7 @@
                   colspan="6"
                   style="text-align: center; color: var(--text2); padding: 24px"
                 >
-                  Waiting for audio events from hardware
+                  Waiting for data from ML hardware pipeline...
                 </td>
               </tr>
             </tbody>
@@ -458,7 +457,7 @@
             </div>
             <div id="sms-wrap">
               <div class="sms-empty">
-                No SMS sent yet. Will appear here on alert.
+                No SMS alerts dispatched yet.
               </div>
             </div>
           </div>
@@ -472,7 +471,7 @@
 
     <script>
       // ─────────────────────────────────────────────
-      // Single demo vehicle — represents the breadboard
+      // Fleet Data State
       // ─────────────────────────────────────────────
       const vehicles = {
         "Demo Vehicle": {
@@ -487,6 +486,7 @@
       let tripCount = 0;
       let smsCount = 0;
       const eventRows = [];
+      let lastSeenTime = null;
 
       function now() {
         return new Date().toTimeString().slice(0, 8);
@@ -496,7 +496,7 @@
       }
 
       // ─────────────────────────────────────────────
-      // Vehicle panel
+      // Render Vehicle Side Panel
       // ─────────────────────────────────────────────
       function renderVehicles() {
         const stateColors = {
@@ -517,25 +517,25 @@
         )
           .map(
             ([plate, v]) => `
-      <div class="vehicle-row">
-        <div>
-          <div class="vehicle-plate">${plate}</div>
-          <div class="trip-count">${v.tripCount} trip${v.tripCount !== 1 ? "s" : ""} today</div>
-        </div>
-        <div class="vehicle-state">
-          <div class="state-dot" style="background:${stateColors[v.status]}"></div>
-          <span class="state-label" style="color:${v.status === "suspect" ? "var(--red)" : "var(--text2)"}">
-            ${stateLabels[v.status]}
-          </span>
-        </div>
-      </div>
-    `,
+          <div class="vehicle-row">
+            <div>
+              <div class="vehicle-plate">${plate}</div>
+              <div class="trip-count">${v.tripCount} trip${v.tripCount !== 1 ? "s" : ""} today</div>
+            </div>
+            <div class="vehicle-state">
+              <div class="state-dot" style="background:${stateColors[v.status]}"></div>
+              <span class="state-label" style="color:${v.status === "suspect" ? "var(--red)" : "var(--text2)"}">
+                ${stateLabels[v.status]}
+              </span>
+            </div>
+          </div>
+        `,
           )
           .join("");
       }
 
       // ─────────────────────────────────────────────
-      // Event feed
+      // Append Items to the Event Feed Grid
       // ─────────────────────────────────────────────
       function addEventRow(
         vehicleId,
@@ -580,47 +580,40 @@
         document.getElementById("events-tbody").innerHTML = eventRows
           .map(
             (r) => `
-      <tr>
-        <td>${r.time}</td>
-        <td>${r.vehicleId}</td>
-        <td><span class="tag ${r.soundTagClass}">${r.soundType.replace("_", " ")}</span></td>
-        <td>${r.confidence}%</td>
-        <td><span class="tag ${r.motionTagClass}">${r.motionLabel}</span></td>
-        <td><span class="tag ${r.actionTag}">${r.action}</span></td>
-      </tr>
-    `,
+          <tr>
+            <td>${r.time}</td>
+            <td>${r.vehicleId}</td>
+            <td><span class="tag ${r.soundTagClass}">${r.soundType.replace("_", " ")}</span></td>
+            <td>${r.confidence}%</td>
+            <td><span class="tag ${r.motionTagClass}">${r.motionLabel}</span></td>
+            <td><span class="tag ${r.actionTag}">${r.action}</span></td>
+          </tr>
+        `,
           )
           .join("");
       }
 
       // ─────────────────────────────────────────────
-      // SMS panel
+      // Render Africa's Talking Virtual Phone UI Bubble
       // ─────────────────────────────────────────────
-      function showSMS(vehicleId) {
-        const msg = `[BodaShield] THEFT ALERT
-Vehicle : ${vehicleId}
-Event   : Fuel siphoning detected
-Status  : Vehicle parked — no motion
-Time    : ${now()}
-
-Reply CONFIRM to acknowledge.
-Reply HELP for emergency contacts.`;
+      function showSMS(vehicleId, customMsg = null) {
+        const msg = customMsg || `[BodaShield] THEFT ALERT\nVehicle : ${vehicleId}\nEvent   : Fuel siphoning detected\nStatus  : Vehicle parked — no motion\nTime    : ${now()}\n\nReply CONFIRM to acknowledge.`;
 
         document.getElementById("sms-wrap").innerHTML = `
-      <div class="sms-wrap">
-        <div class="sms-bubble">${msg}</div>
-        <div class="sms-meta">
-          <div class="sms-ok"></div>
-          Delivered · +2547XXXXXXXX · KES 1.00 · ${now()}
-        </div>
-      </div>
-    `;
+          <div class="sms-wrap">
+            <div class="sms-bubble">${msg}</div>
+            <div class="sms-meta">
+              <div class="sms-ok"></div>
+              Delivered · +254704784613 · Sandbox Route · ${now()}
+            </div>
+          </div>
+        `;
       }
 
       // ─────────────────────────────────────────────
-      // Core event processor — called by SSE and demo
+      // Core UI Animation Engine
       // ─────────────────────────────────────────────
-      function processEvent(data) {
+      function processEvent(data, customText = null) {
         const v = vehicles[data.vehicle_id];
         if (!v) return;
 
@@ -633,75 +626,77 @@ Reply HELP for emergency contacts.`;
           v.motion = true;
           v.status = "moving";
           v.lastSlosh = Date.now();
-          addEventRow(
-            data.vehicle_id,
-            "slosh",
-            data.confidence,
-            "moving",
-            "trip logged",
-            "tag-blue",
-          );
-        } else if (data.sound_type === "siphon") {
+          addEventRow(data.vehicle_id, "slosh", data.confidence, "moving", "trip logged", "tag-blue");
+        } 
+        else if (data.sound_type === "siphon") {
           if (!v.motion) {
-            // Parked + siphon = theft
             v.status = "suspect";
             alertCount++;
             setMetric("m-alerts", alertCount);
 
             document.getElementById("alert-banner").classList.add("active");
             document.getElementById("status-dot").classList.add("red");
-            document.getElementById("status-text").textContent =
-              "🚨 ALERT ACTIVE";
+            document.getElementById("status-text").textContent = "🚨 ALERT ACTIVE";
             document.title = "🚨 ALERT - BodaShield";
 
             smsCount++;
             setMetric("m-sms", smsCount);
-            showSMS(data.vehicle_id);
+            showSMS(data.vehicle_id, customText);
 
-            addEventRow(
-              data.vehicle_id,
-              "siphon",
-              data.confidence,
-              "suspect",
-              "SMS sent",
-              "tag-red",
-            );
+            addEventRow(data.vehicle_id, "siphon", data.confidence, "suspect", "SMS sent", "tag-red");
 
             setTimeout(() => {
-              document
-                .getElementById("alert-banner")
-                .classList.remove("active");
+              document.getElementById("alert-banner").classList.remove("active");
               document.getElementById("status-dot").classList.remove("red");
-              document.getElementById("status-text").textContent =
-                "ARMED - listening";
+              document.getElementById("status-text").textContent = "ARMED - listening";
               document.title = "BodaShield - Fleet Intelligence";
               v.status = "parked";
               renderVehicles();
             }, 8000);
           } else {
-            // Moving + siphon = road noise, ignore
-            addEventRow(
-              data.vehicle_id,
-              "siphon",
-              data.confidence,
-              "moving",
-              "ignored",
-              "tag-gray",
-            );
+            addEventRow(data.vehicle_id, "siphon", data.confidence, "moving", "ignored", "tag-gray");
           }
-        } else if (data.sound_type === "fuel_added") {
-          v.status = "parked";
-          addEventRow(
-            data.vehicle_id,
-            "fuel_added",
-            data.confidence,
-            "parked",
-            "fill logged",
-            "tag-green",
-          );
         }
-
         renderVehicles();
+      }
+
+      // ─────────────────────────────────────────────
+      // LIVE BACKEND POLLER (Replaces SSE /stream)
+      // ─────────────────────────────────────────────
+      async function pollBackend() {
+        try {
+          const res = await fetch("http://localhost:5000/api/fleet_status");
+          const data = await res.json();
+
+          if (data.recent_alerts && data.recent_alerts.length > 0) {
+            const latestAlert = data.recent_alerts[0];
+
+            // Trigger animations only if it's a completely new database timestamp
+            if (latestAlert.ts !== lastSeenTime) {
+              lastSeenTime = latestAlert.ts;
+
+              // Register the vehicle if it's dynamic/not in our list yet
+              if (!vehicles[latestAlert.plate]) {
+                vehicles[latestAlert.plate] = {
+                  motion: false,
+                  tripCount: 0,
+                  lastSlosh: null,
+                  status: "parked"
+                };
+              }
+
+              // Fire the alert UI animation loop using backend data!
+              processEvent({
+                vehicle_id: latestAlert.plate,
+                sound_type: "siphon",
+                confidence: Math.round(latestAlert.confidence * 100)
+              }, latestAlert.sent_message || null); // Pass the dynamic text from the ML code!
+            }
+          }
+        } catch (err) {
+          // Quietly log if backend isn't awake yet
+          console.log("Connecting to BodaShield backend pipeline...");
+        }
       }
 
       // ─────────────────────────────────────────────
@@ -718,44 +713,25 @@ Reply HELP for emergency contacts.`;
       }, 5000);
 
       // ─────────────────────────────────────────────
-      // SSE — connects to Flask /stream
-      // ─────────────────────────────────────────────
-      function connectSSE() {
-        const es = new EventSource("/stream");
-        es.onmessage = (e) => {
-          try {
-            processEvent(JSON.parse(e.data));
-          } catch (err) {
-            console.error("SSE parse error:", err);
-          }
-        };
-        es.onerror = () =>
-          console.warn("SSE disconnected — browser will retry");
-      }
-
-      // ─────────────────────────────────────────────
-      // Demo — simulates the breadboard sequence
+      // Demo Click Mock Pipeline
       // ─────────────────────────────────────────────
       function fireDemo() {
         const btn = document.getElementById("demo-btn");
         btn.disabled = true;
         btn.textContent = "Running…";
 
-        // 1. Slosh — vehicle in motion
         processEvent({
           vehicle_id: "Demo Vehicle",
           sound_type: "slosh",
           confidence: 88,
         });
 
-        // 2. Motion stops
         setTimeout(() => {
           vehicles["Demo Vehicle"].motion = false;
           vehicles["Demo Vehicle"].status = "parked";
           renderVehicles();
         }, 1500);
 
-        // 3. Siphon detected while parked — alert fires
         setTimeout(() => {
           processEvent({
             vehicle_id: "Demo Vehicle",
@@ -764,7 +740,6 @@ Reply HELP for emergency contacts.`;
           });
         }, 2800);
 
-        // 4. Re-enable
         setTimeout(() => {
           btn.disabled = false;
           btn.textContent = "🚨 Demo theft";
@@ -772,10 +747,13 @@ Reply HELP for emergency contacts.`;
       }
 
       // ─────────────────────────────────────────────
-      // Boot
+      // Application Boot
       // ─────────────────────────────────────────────
       renderVehicles();
-      connectSSE();
+      
+      // Actively sync with your Python server database every 3 seconds
+      setInterval(pollBackend, 3000);
+      pollBackend();
     </script>
   </body>
 </html>
