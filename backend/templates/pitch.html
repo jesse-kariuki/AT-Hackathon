@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><title>BodaShield — ROI</title>
+<style>
+body{background:#0a0a0a;color:#e0e0e0;font-family:'Courier New',monospace;padding:40px 24px;max-width:680px;margin:0 auto}
+h1{color:#00e676;font-size:22px;margin-bottom:6px}
+h2{color:#40c4ff;font-size:14px;margin:28px 0 12px;text-transform:uppercase;letter-spacing:.1em}
+.stat{background:#141414;border:1px solid #2a2a2a;border-radius:6px;padding:14px;margin:8px 0}
+.sl{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+.sv{font-size:28px;font-weight:bold;color:#00e676;margin-top:4px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input[type=range]{width:100%;accent-color:#00e676;margin:8px 0 14px}
+label{font-size:12px;color:#aaa}
+.roi{background:#001800;border:1px solid #00e676;border-radius:8px;padding:20px;margin-top:20px;text-align:center}
+.rw{font-size:56px;font-weight:bold;color:#00e676}
+.rl{color:#00e676;font-size:13px}
+.rm{margin-top:14px;font-size:12px;color:#888}
+a{color:#00e676}
+</style>
+</head>
+<body>
+<h1>⚡ BodaShield</h1>
+<p style="color:#666;font-size:12px">Fleet financial protection · ROI calculator</p>
+
+<h2>The problem</h2>
+<div class="g2">
+  <div class="stat"><div class="sl">Annual fuel theft Kenya</div><div class="sv">KES 5B</div></div>
+  <div class="stat"><div class="sl">Matatu fare lost</div><div class="sv">30–40%</div></div>
+  <div class="stat"><div class="sl">Commercial vehicles</div><div class="sv">~80,000</div></div>
+  <div class="stat"><div class="sl">Addressable owners</div><div class="sv">~15,000</div></div>
+</div>
+
+<h2>Your ROI</h2>
+
+<label>Monthly fuel budget/vehicle: <strong id="fv">KES 30,000</strong></label>
+<input type="range" min="10000" max="150000" step="1000" value="30000" oninput="upd('f',this.value)">
+
+<label>Fleet size: <strong id="nv">5 vehicles</strong></label>
+<input type="range" min="1" max="50" step="1" value="5" oninput="upd('n',this.value)">
+
+<label>Monthly theft recovery estimate: <strong id="pv">15%</strong></label>
+<input type="range" min="5" max="40" step="1" value="15" oninput="upd('p',this.value)">
+
+<div class="roi">
+  <div style="color:#666;font-size:11px;text-transform:uppercase;letter-spacing:.1em">Payback period</div>
+  <div class="rw" id="pw">—</div>
+  <div class="rl">weeks</div>
+  <div class="rm">
+    Hardware: KES <span id="hw">—</span> &nbsp;·&nbsp;
+    Monthly sub: KES <span id="sub">—</span> &nbsp;·&nbsp;
+    Monthly savings: KES <span id="sav">—</span>
+  </div>
+</div>
+
+<h2>Pricing</h2>
+<div class="g2">
+  <div class="stat"><div class="sl">Hardware per vehicle</div><div class="sv">KES 8,000</div></div>
+  <div class="stat"><div class="sl">Monthly subscription</div><div class="sv">KES 500</div></div>
+</div>
+
+<p style="margin-top:24px;font-size:11px;color:#444"><a href="/">← Back to dashboard</a></p>
+
+<script>
+let F=30000,N=5,P=15;
+function upd(k,v){
+  if(k==='f'){F=+v;document.getElementById('fv').textContent='KES '+Number(v).toLocaleString();}
+  if(k==='n'){N=+v;document.getElementById('nv').textContent=v+' vehicles';}
+  if(k==='p'){P=+v;document.getElementById('pv').textContent=v+'%';}
+  const hw=N*8000, sub=N*500, sav=N*F*(P/100), net=sav-sub;
+  const wks=net>0?Math.ceil(hw/net*4.33):999;
+  document.getElementById('hw').textContent=hw.toLocaleString();
+  document.getElementById('sub').textContent=sub.toLocaleString();
+  document.getElementById('sav').textContent=Math.round(sav).toLocaleString();
+  document.getElementById('pw').textContent=wks<200?wks:'200+';
+}
+upd('f',30000);
+</script>
+</body>
+</html>
