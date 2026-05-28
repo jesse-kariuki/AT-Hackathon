@@ -5,7 +5,11 @@ Run: python app.py
 import os, sqlite3, logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template_string
-from flask_cors import CORS
+try:
+    from flask_cors import CORS
+except ImportError:
+    def CORS(_app):
+        return _app
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -170,7 +174,8 @@ def ussd():
 
 @app.route("/")
 def dashboard():
-    return render_template_string("<h1>BodaShield Logistics API Online</h1><p>Query /api/fleet_status for data.</p>")
+    from flask import render_template
+    return render_template("dashboard.html")
 
 
 if __name__ == "__main__":
