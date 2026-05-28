@@ -11,7 +11,7 @@ url = "https://api.sandbox.africastalking.com/version1/messaging"
 headers = {
     "Accept": "application/json",
     # PASTE YOUR KEY INSIDE THESE QUOTES:
-    "apiKey": "atsk_848360bb9c713f2971bc4c3a38bdaeff3823ab43ed12ddd9451e86b9b46220adfbe522e9" 
+    "apiKey": "atsk_c3c4814a4c3df2806bf187391d6ce2aa8fefd2841af21234826aae429b51752128509960" 
 }
 
 data = {

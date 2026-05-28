@@ -1,0 +1,29 @@
+{
+  "sample_rate": 8000,
+  "n_mfcc": 13,
+  "window_len": 3.0,
+  "hop_length": 512,
+  "n_fft": 512,
+  "fft_bands": [
+    [
+      0,
+      80
+    ],
+    [
+      80,
+      200
+    ],
+    [
+      200,
+      800
+    ]
+  ],
+  "label_map": {
+    "0": "pump_hum",
+    "1": "slosh",
+    "2": "siphon",
+    "3": "healthy",
+    "4": "knock"
+  },
+  "n_features": 32
+}

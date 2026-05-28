@@ -15,7 +15,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 load_dotenv()
 
-OWNER_PHONE = os.getenv("OWNER_PHONE", "+254700000000")
+OWNER_PHONE = os.getenv("OWNER_PHONE", "+254704784613")
 
 app = Flask(__name__)
 CORS(app)
@@ -56,7 +56,7 @@ def send_sms(dynamic_message):
     
     headers = {
         "Accept": "application/json",
-        "apiKey": "atsk_848360bb9c713f2971bc4c3a38bdaeff3823ab43ed12ddd9451e86b9b46220adfbe522e9"
+        "apiKey": "atsk_4bb1bce46ea4f9000c820f5ba76123fddaaf3ea0f8b57d9867dd698a5620bbef3bc19067"
     }
     
     data = {
