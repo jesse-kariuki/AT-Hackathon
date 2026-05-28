@@ -29,9 +29,14 @@
     - Ignition   → GPIO 4  (jumper wire: insert = ignition ON)
 */
 
+#include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
+
+// Forward declaration — fixes "processCommand not declared in this scope"
+void processCommand(String cmd);
 
 // ── CONFIGURE THESE ───────────────────────────────────────────────────────────
 const char* WIFI_SSID   = "YOUR_WIFI_SSID";
@@ -86,7 +91,7 @@ void connectWiFi() {
   while (WiFi.status() != WL_CONNECTED) {
     if (millis() - start > WIFI_TIMEOUT_MS) {
       Serial.println("\n[ERR] WiFi timeout — check credentials");
-      setLED(1, 0, 0);  
+      setLED(1, 0, 0);  // solid red = failed
       return;
     }
     delay(500);
@@ -116,7 +121,7 @@ bool postAlert(const char* alertType, float confidence) {
   }
 
   // Build JSON payload
-  StaticJsonDocument<256> doc;
+  JsonDocument doc;
   doc["alert_type"]  = alertType;
   doc["plate"]       = PLATE;
   doc["lat"]         = LAT;
@@ -133,14 +138,13 @@ bool postAlert(const char* alertType, float confidence) {
   // LED: solid red while sending
   setLED(1, 0, 0);
 
+  WiFiClientSecure client;
+  client.setInsecure();   // skip SSL cert check for ngrok demo
+
   HTTPClient http;
-  http.begin(endpoint);
+  http.begin(client, endpoint);
   http.addHeader("Content-Type", "application/json");
   http.setTimeout(HTTP_TIMEOUT_MS);
-
-  // For demo: disable SSL certificate check (ngrok free tier)
-  // In production: remove this and use proper certs
-  http.setInsecure();
 
   int code = http.POST(payload);
 
