@@ -116,7 +116,7 @@ def fleet_status():
 
 @app.route("/")
 def dashboard():
-    return render_template("index.html")
+    return render_template("dashboard.html")
 
 if __name__ == "__main__":
     if os.path.exists(DB_PATH):

@@ -114,7 +114,7 @@ def fire_alert(kind: str, confidence: float, ser):
 
     # POST to backend
     if HAS_REQUESTS:
-        endpoint = "/fuel_alert" if kind == "SIPHON" else "/engine_alert"
+        endpoint = "/fuel_alert" 
         try:
             requests.post(
                 f"{BACKEND_URL}{endpoint}",
@@ -159,27 +159,17 @@ def inference_loop(fuel_bundle, engine_bundle, ser):
 
             print(f"  [{label_name:<10}] conf={prob_fuel:.2f}  {'█' * int(prob_fuel*20)}")
 
-            # Siphon detection
-            if pred_fuel == 2 and prob_fuel >= CONFIDENCE_THRESH:
-                siphon_streak += 1
-                if siphon_streak >= CONSECUTIVE_HITS:
-                    fire_alert("SIPHON", prob_fuel, ser)
-                    siphon_streak = 0
-            else:
-                siphon_streak = 0
 
-            # Engine knock (if model available)
-            if engine_model is not None:
-                feat_scaled_eng = engine_scaler.transform([feat])
-                pred_eng  = engine_model.predict(feat_scaled_eng)[0]
-                prob_eng  = engine_model.predict_proba(feat_scaled_eng)[0].max()
-                if pred_eng == 1 and prob_eng >= CONFIDENCE_THRESH:  # 1 = knock (remapped)
-                    knock_streak += 1
-                    if knock_streak >= CONSECUTIVE_HITS:
-                        fire_alert("KNOCK", prob_eng, ser)
-                        knock_streak = 0
-                else:
-                    knock_streak = 0
+
+            # SIPHON — accept immediately (no confidence, no streaks)
+            if pred_fuel == 2:
+                fire_alert("SIPHON", prob_fuel, ser)
+
+            # KNOCK — accept immediately (no confidence, no streaks)
+            if pred_eng == 1:
+                fire_alert("KNOCK", prob_eng, ser)
+
+            
 
         except Exception as e:
             print(f"  ✗ Inference error: {e}")
@@ -326,7 +316,7 @@ def main():
                 fuel_bundle = bundle
             else:
                 engine_bundle = bundle
-            print(f"  ✅ Loaded {name} model")
+            print(f"   Loaded {name} model")
         else:
             print(f"  ⚠ {path} not found — run 03_train_model.py first")
 
