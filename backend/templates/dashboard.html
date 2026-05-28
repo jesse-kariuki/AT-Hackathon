@@ -1,326 +1,781 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BodaShield — Fleet Intelligence</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Sora:wght@300;400;600;700&display=swap');
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BodaShield — Fleet Intelligence</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Sora:wght@300;400;600;700&display=swap");
 
-  :root {
-    --bg: #0d0d0b;
-    --bg2: #141412;
-    --bg3: #1c1c1a;
-    --border: #2a2a27;
-    --text: #c8c6bc;
-    --text2: #888780;
-    --green: #1D9E75;
-    --red: #E24B4A;
-    --amber: #EF9F27;
-    --blue: #4A90D9;
-    --mono: 'JetBrains Mono', monospace;
-    --sans: 'Sora', sans-serif;
-  }
+      :root {
+        --bg: #0d0d0b;
+        --bg2: #141412;
+        --bg3: #1c1c1a;
+        --border: #2a2a27;
+        --text: #c8c6bc;
+        --text2: #888780;
+        --green: #1d9e75;
+        --red: #e24b4a;
+        --amber: #ef9f27;
+        --blue: #4a90d9;
+        --mono: "JetBrains Mono", monospace;
+        --sans: "Sora", sans-serif;
+      }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+      }
 
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 28px; border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-  }
-  .logo { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
-  .logo span { color: var(--green); }
-  .status-pill {
-    display: flex; align-items: center; gap: 8px;
-    font-family: var(--mono); font-size: 12px; color: var(--text2);
-    padding: 6px 14px; border: 1px solid var(--border); border-radius: 100px;
-  }
-  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 28px;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg2);
+      }
+      .logo {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .logo span {
+        color: var(--green);
+      }
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--text2);
+        padding: 6px 14px;
+        border: 1px solid var(--border);
+        border-radius: 100px;
+      }
+      .pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        animation: pulse 2s infinite;
+      }
+      .pulse.red {
+        background: var(--red);
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.3);
+        }
+      }
 
-  .alert-banner {
-    display: none; background: var(--red); color: #fff;
-    padding: 14px 28px; font-weight: 600; font-size: 15px;
-    text-align: center; letter-spacing: .02em;
-    animation: flashbg 1s infinite;
-  }
-  .alert-banner.active { display: block; }
-  @keyframes flashbg { 0%,100%{background:var(--red)} 50%{background:#c03030} }
+      .alert-banner {
+        display: none;
+        background: var(--red);
+        color: #fff;
+        padding: 14px 28px;
+        font-weight: 600;
+        font-size: 15px;
+        text-align: center;
+        letter-spacing: 0.02em;
+        animation: flashbg 1s infinite;
+      }
+      .alert-banner.active {
+        display: block;
+      }
+      @keyframes flashbg {
+        0%,
+        100% {
+          background: var(--red);
+        }
+        50% {
+          background: #c03030;
+        }
+      }
 
-  main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+      main {
+        padding: 24px 28px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
 
-  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
-  .metric {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 12px; padding: 18px 20px;
-  }
-  .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--text2); margin-bottom: 8px; }
-  .metric-value { font-size: 32px; font-weight: 700; font-family: var(--mono); }
-  .metric-value.green { color: var(--green); }
-  .metric-value.red { color: var(--red); }
-  .metric-value.amber { color: var(--amber); }
-  .metric-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+      .metric {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px 20px;
+      }
+      .metric-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text2);
+        margin-bottom: 8px;
+      }
+      .metric-value {
+        font-size: 32px;
+        font-weight: 700;
+        font-family: var(--mono);
+      }
+      .metric-value.green {
+        color: var(--green);
+      }
+      .metric-value.red {
+        color: var(--red);
+      }
+      .metric-value.amber {
+        color: var(--amber);
+      }
+      .metric-sub {
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 4px;
+      }
 
-  .grid2 { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; margin-bottom: 24px; }
-  .panel {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 12px; overflow: hidden;
-  }
-  .panel-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 20px; border-bottom: 1px solid var(--border);
-    font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text2);
-  }
-  .demo-btn {
-    background: var(--red); color: #fff; border: none; cursor: pointer;
-    font-size: 11px; padding: 4px 12px; border-radius: 6px; font-family: var(--sans);
-    font-weight: 600;
-  }
-  .demo-btn:hover { background: #c03030; }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 14px;
+        margin-bottom: 24px;
+      }
 
-  /* Events table */
-  .events-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .events-table th {
-    font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
-    color: var(--text2); padding: 10px 20px; text-align: left;
-    border-bottom: 1px solid var(--border);
-  }
-  .events-table td { padding: 10px 20px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 12px; }
-  .events-table tr:last-child td { border-bottom: none; }
-  .events-table tr:hover td { background: var(--bg3); }
+      .panel {
+        background: var(--bg2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text2);
+      }
+      .demo-btn {
+        background: var(--red);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        font-size: 11px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-family: var(--sans);
+        font-weight: 600;
+        transition: background 0.15s;
+      }
+      .demo-btn:hover {
+        background: #c03030;
+      }
+      .demo-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
 
-  .tag {
-    display: inline-block; font-size: 10px; font-weight: 600;
-    padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em;
-  }
-  .tag-red { background: rgba(226,75,74,.15); color: var(--red); }
-  .tag-amber { background: rgba(239,159,39,.15); color: var(--amber); }
-  .tag-green { background: rgba(29,158,117,.15); color: var(--green); }
-  .tag-blue { background: rgba(74,144,217,.15); color: var(--blue); }
+      .events-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .events-table th {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text2);
+        padding: 10px 20px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      .events-table td {
+        padding: 10px 20px;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .events-table tr:last-child td {
+        border-bottom: none;
+      }
+      .events-table tr:hover td {
+        background: var(--bg3);
+      }
 
-  /* Trips table */
-  .trips-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .trips-table th {
-    font-size: 10px; text-transform: uppercase; letter-spacing: .05em;
-    color: var(--text2); padding: 8px 16px; text-align: left; border-bottom: 1px solid var(--border);
-  }
-  .trips-table td { padding: 8px 16px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
-  .variance-high { color: var(--red); }
-  .variance-ok { color: var(--green); }
+      .tag {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .tag-red {
+        background: rgba(226, 75, 74, 0.15);
+        color: var(--red);
+      }
+      .tag-amber {
+        background: rgba(239, 159, 39, 0.15);
+        color: var(--amber);
+      }
+      .tag-green {
+        background: rgba(29, 158, 117, 0.15);
+        color: var(--green);
+      }
+      .tag-blue {
+        background: rgba(74, 144, 217, 0.15);
+        color: var(--blue);
+      }
+      .tag-gray {
+        background: rgba(136, 135, 128, 0.15);
+        color: var(--text2);
+      }
 
-  /* USSD demo */
-  .ussd-demo {
-    background: #0a0a08; border: 1px solid var(--border); border-radius: 8px;
-    margin: 16px 20px; padding: 16px; font-family: var(--mono); font-size: 13px;
-  }
-  .ussd-screen { color: var(--green); min-height: 120px; white-space: pre-line; line-height: 1.6; }
-  .ussd-input-row { display: flex; gap: 8px; margin-top: 12px; }
-  .ussd-input {
-    flex: 1; background: var(--bg3); border: 1px solid var(--border); color: var(--text);
-    padding: 8px 12px; border-radius: 6px; font-family: var(--mono); font-size: 13px;
-  }
-  .ussd-btn {
-    background: var(--green); color: #fff; border: none; cursor: pointer;
-    padding: 8px 16px; border-radius: 6px; font-family: var(--sans); font-weight: 600; font-size: 12px;
-  }
+      .vehicle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      .vehicle-row:last-child {
+        border-bottom: none;
+      }
+      .vehicle-plate {
+        font-family: var(--mono);
+        font-weight: 700;
+        font-size: 13px;
+      }
+      .vehicle-state {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .state-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .state-label {
+        font-size: 12px;
+        font-family: var(--mono);
+      }
+      .trip-count {
+        font-size: 11px;
+        color: var(--text2);
+        font-family: var(--mono);
+      }
+      .motion-note {
+        padding: 10px 20px;
+        font-size: 11px;
+        color: var(--text2);
+        border-top: 1px solid var(--border);
+        line-height: 1.5;
+      }
 
-  footer { text-align: center; padding: 20px; color: var(--text2); font-size: 11px; }
-</style>
-</head>
-<body>
+      .sms-wrap {
+        padding: 16px 20px;
+      }
+      .sms-bubble {
+        background: var(--bg3);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--text);
+        white-space: pre-wrap;
+      }
+      .sms-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        color: var(--text2);
+        margin-top: 10px;
+        font-family: var(--mono);
+      }
+      .sms-ok {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        flex-shrink: 0;
+      }
+      .sms-empty {
+        font-size: 12px;
+        color: var(--text2);
+        text-align: center;
+        padding: 24px 20px;
+      }
 
-<header>
-  <div class="logo">Boda<span>Shield</span></div>
-  <div class="status-pill"><div class="pulse"></div><span id="status-text">ARMED — listening</span></div>
-</header>
+      .legend {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding: 10px 20px;
+        border-top: 1px solid var(--border);
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: var(--text2);
+      }
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
 
-<div class="alert-banner" id="alert-banner">
-  🚨 FUEL THEFT ALERT — ACTIVE — Vehicle KCD 123X — Alert fired, owner called
-</div>
-
-<main>
-  <!-- Metrics row -->
-  <div class="metrics">
-    <div class="metric">
-      <div class="metric-label">Vehicles monitored</div>
-      <div class="metric-value green" id="m-vehicles">2</div>
-      <div class="metric-sub">Active now</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Alerts today</div>
-      <div class="metric-value red" id="m-alerts">0</div>
-      <div class="metric-sub">Fuel + engine events</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Fare leakage today</div>
-      <div class="metric-value amber" id="m-leakage">KES 0</div>
-      <div class="metric-sub">Across fleet</div>
-    </div>
-    <div class="metric">
-      <div class="metric-label">Trips audited</div>
-      <div class="metric-value" id="m-trips">0</div>
-      <div class="metric-sub">Passenger counts</div>
-    </div>
-  </div>
-
-  <!-- Events + USSD demo -->
-  <div class="grid2">
-    <div class="panel">
-      <div class="panel-header">
-        <span>Live event feed</span>
-        <button class="demo-btn" onclick="fireDemo()">🚨 Fire demo alert</button>
+      footer {
+        text-align: center;
+        padding: 20px;
+        color: var(--text2);
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">Fuel-Theft<span>Shield</span></div>
+      <div class="status-pill">
+        <div class="pulse" id="status-dot"></div>
+        <span id="status-text">ARMED - listening</span>
       </div>
-      <table class="events-table">
-        <thead>
-          <tr><th>Time</th><th>Vehicle</th><th>Event</th><th>Confidence</th><th>Status</th></tr>
-        </thead>
-        <tbody id="events-tbody">
-          <tr><td colspan="5" style="text-align:center;color:var(--text2);padding:24px">Waiting for events...</td></tr>
-        </tbody>
-      </table>
+    </header>
+
+    <div class="alert-banner" id="alert-banner">
+      🚨 FUEL THEFT ALERT - Demo vehicle - Siphoning while parked - Owner
+      notified via SMS
     </div>
 
-    <div class="panel">
-      <div class="panel-header"><span>USSD simulator — *384*1#</span></div>
-      <div class="ussd-demo">
-        <div class="ussd-screen" id="ussd-screen">Dial *384*1# on any Safaricom SIM
-to check fleet status without internet.
-
-Simulating session below:</div>
-        <div class="ussd-input-row">
-          <input class="ussd-input" id="ussd-input" placeholder="Enter option (e.g. 1, 1*1)" />
-          <button class="ussd-btn" onclick="sendUSSD()">Send</button>
+    <main>
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Theft alerts</div>
+          <div class="metric-value red" id="m-alerts">0</div>
+          <div class="metric-sub">Siphon events today</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Trips today</div>
+          <div class="metric-value green" id="m-trips">0</div>
+          <div class="metric-sub">Inferred from slosh</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">SMS sent</div>
+          <div class="metric-value" id="m-sms">0</div>
+          <div class="metric-sub">Africa's Talking</div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Fare audit trips -->
-  <div class="panel">
-    <div class="panel-header"><span>FareAudit — passenger count vs M-Pesa collected</span></div>
-    <table class="trips-table">
-      <thead>
-        <tr><th>Time</th><th>Vehicle</th><th>Passengers</th><th>Expected</th><th>M-Pesa</th><th>Variance</th><th>Status</th></tr>
-      </thead>
-      <tbody id="trips-tbody">
-        <tr><td colspan="7" style="text-align:center;color:var(--text2);padding:20px">No trips yet. ESP32 will push counts every 5 minutes.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</main>
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-header">
+            <span>Live event feed</span>
+            <button class="demo-btn" id="demo-btn" onclick="fireDemo()">
+              Demo theft
+            </button>
+          </div>
+          <table class="events-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Vehicle</th>
+                <th>Sound detected</th>
+                <th>Confidence</th>
+                <th>Motion state</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="events-tbody">
+              <tr>
+                <td
+                  colspan="6"
+                  style="text-align: center; color: var(--text2); padding: 24px"
+                >
+                  Waiting for audio events from hardware
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background: var(--red)"></div>
+              Siphoning (theft risk)
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background: var(--amber)"></div>
+              Fuel slosh (moving)
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background: var(--green)"></div>
+              Fuel added
+            </div>
+          </div>
+        </div>
 
-<footer>BodaShield v1.0 — Built at the Transportation & Logistics Hackathon</footer>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <div class="panel">
+            <div class="panel-header"><span>Vehicle motion state</span></div>
+            <div id="vehicle-list"></div>
+            <div class="motion-note">
+              State inferred from slosh audio. Slosh = moving. Silence + siphon
+              sound = theft risk.
+            </div>
+          </div>
 
-<script>
-let lastAlertId = null;
+          <div class="panel">
+            <div class="panel-header">
+              <span>SMS log — Africa's Talking</span>
+            </div>
+            <div id="sms-wrap">
+              <div class="sms-empty">
+                No SMS sent yet. Will appear here on alert.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
 
-async function fetchStatus() {
-  try {
-    const resp = await fetch('/status');
-    const data = await resp.json();
+    <footer>
+      BodaShield v1.0 - Built at the Transportation &amp; Logistics Hackathon
+    </footer>
 
-    // Active alert banner
-    const banner = document.getElementById('alert-banner');
-    if (data.active_alert) {
-      banner.classList.add('active');
-      document.getElementById('status-text').textContent = '🚨 ALERT ACTIVE';
-      if (data.active_alert.id !== lastAlertId) {
-        lastAlertId = data.active_alert.id;
-        // Flash title
-        document.title = '🚨 ALERT — BodaShield';
-        setTimeout(() => { document.title = 'BodaShield — Fleet Intelligence'; }, 5000);
-      }
-    } else {
-      banner.classList.remove('active');
-      document.getElementById('status-text').textContent = 'ARMED — listening';
-    }
+    <script>
+      // ─────────────────────────────────────────────
+      // Single demo vehicle — represents the breadboard
+      // ─────────────────────────────────────────────
+      const vehicles = {
+        "Demo Vehicle": {
+          motion: false,
+          tripCount: 0,
+          lastSlosh: null,
+          status: "unknown",
+        },
+      };
 
-    // Events table
-    const tbody = document.getElementById('events-tbody');
-    if (data.recent_events.length > 0) {
       let alertCount = 0;
-      tbody.innerHTML = data.recent_events.map(e => {
-        const isSiphon = e.event_type === 'siphon';
-        const isKnock = e.event_type === 'knock';
-        if (isSiphon || isKnock) alertCount++;
-        const tagClass = isSiphon ? 'tag-red' : isKnock ? 'tag-amber' : 'tag-green';
-        const time = e.timestamp ? e.timestamp.slice(11, 19) : '--';
-        return `<tr>
-          <td>${time}</td>
-          <td>${e.vehicle_id}</td>
-          <td><span class="tag ${tagClass}">${e.event_type}</span></td>
-          <td>${e.confidence ? (e.confidence * 100).toFixed(0) + '%' : '--'}</td>
-          <td><span class="tag ${e.resolved ? 'tag-green' : isSiphon ? 'tag-red' : 'tag-blue'}">${e.resolved ? 'resolved' : isSiphon ? 'active' : 'logged'}</span></td>
-        </tr>`;
-      }).join('');
-      document.getElementById('m-alerts').textContent = alertCount;
-    }
+      let tripCount = 0;
+      let smsCount = 0;
+      const eventRows = [];
 
-    // Trips table
-    const tripsTbody = document.getElementById('trips-tbody');
-    if (data.recent_trips.length > 0) {
-      let totalLeakage = 0;
-      tripsTbody.innerHTML = data.recent_trips.map(t => {
-        totalLeakage += (t.variance || 0);
-        const varClass = t.variance > (t.expected_revenue * 0.2) ? 'variance-high' : 'variance-ok';
-        const time = t.window_end ? t.window_end.slice(11, 19) : '--';
-        return `<tr>
-          <td>${time}</td>
-          <td>${t.vehicle_id}</td>
-          <td>${t.passengers}</td>
-          <td>KES ${t.expected_revenue}</td>
-          <td>KES ${t.mpesa_collected}</td>
-          <td class="${varClass}">KES ${t.variance} (${t.expected_revenue > 0 ? ((t.variance/t.expected_revenue)*100).toFixed(0) : 0}%)</td>
-          <td><span class="tag ${t.alerted ? 'tag-red' : 'tag-green'}">${t.alerted ? 'alerted' : 'ok'}</span></td>
-        </tr>`;
-      }).join('');
-      document.getElementById('m-leakage').textContent = 'KES ' + totalLeakage;
-      document.getElementById('m-trips').textContent = data.recent_trips.length;
-    }
+      function now() {
+        return new Date().toTimeString().slice(0, 8);
+      }
+      function setMetric(id, val) {
+        document.getElementById(id).textContent = val;
+      }
 
-  } catch (e) {
-    console.error('Status fetch failed:', e);
-  }
-}
+      // ─────────────────────────────────────────────
+      // Vehicle panel
+      // ─────────────────────────────────────────────
+      function renderVehicles() {
+        const stateColors = {
+          moving: "var(--green)",
+          parked: "var(--text2)",
+          suspect: "var(--red)",
+          unknown: "var(--border)",
+        };
+        const stateLabels = {
+          moving: "Moving",
+          parked: "Parked",
+          suspect: "Parked — theft risk",
+          unknown: "No signal yet",
+        };
 
-async function fireDemo() {
-  const btn = event.target;
-  btn.textContent = 'Firing...';
-  btn.disabled = true;
-  try {
-    await fetch('/demo', { method: 'POST' });
-    btn.textContent = '✓ Alert fired!';
-    setTimeout(() => { btn.textContent = '🚨 Fire demo alert'; btn.disabled = false; }, 3000);
-  } catch(e) {
-    btn.textContent = 'Error'; btn.disabled = false;
-  }
-}
+        document.getElementById("vehicle-list").innerHTML = Object.entries(
+          vehicles,
+        )
+          .map(
+            ([plate, v]) => `
+      <div class="vehicle-row">
+        <div>
+          <div class="vehicle-plate">${plate}</div>
+          <div class="trip-count">${v.tripCount} trip${v.tripCount !== 1 ? "s" : ""} today</div>
+        </div>
+        <div class="vehicle-state">
+          <div class="state-dot" style="background:${stateColors[v.status]}"></div>
+          <span class="state-label" style="color:${v.status === "suspect" ? "var(--red)" : "var(--text2)"}">
+            ${stateLabels[v.status]}
+          </span>
+        </div>
+      </div>
+    `,
+          )
+          .join("");
+      }
 
-async function sendUSSD() {
-  const input = document.getElementById('ussd-input');
-  const screen = document.getElementById('ussd-screen');
-  const text = input.value.trim();
+      // ─────────────────────────────────────────────
+      // Event feed
+      // ─────────────────────────────────────────────
+      function addEventRow(
+        vehicleId,
+        soundType,
+        confidence,
+        motionState,
+        action,
+        actionTag,
+      ) {
+        const soundTagMap = {
+          siphon: "tag-red",
+          slosh: "tag-amber",
+          fuel_added: "tag-green",
+        };
+        const motionTagMap = {
+          moving: "tag-green",
+          parked: "tag-gray",
+          suspect: "tag-red",
+          unknown: "tag-gray",
+        };
+        const motionLabel = {
+          moving: "moving",
+          parked: "parked",
+          suspect: "parked",
+          unknown: "—",
+        };
 
-  try {
-    const resp = await fetch('/ussd', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `sessionId=demo&phoneNumber=%2B254711000000&text=${encodeURIComponent(text)}`
-    });
-    const result = await resp.text();
-    const cleaned = result.replace(/^(CON|END)\s*/, '');
-    screen.textContent = `> *384*1#\n\n${cleaned}`;
-    input.value = '';
-  } catch(e) {
-    screen.textContent = 'Connection error. Is Flask running?';
-  }
-}
+        eventRows.unshift({
+          time: now(),
+          vehicleId,
+          soundType,
+          confidence,
+          motionState,
+          action,
+          actionTag,
+          soundTagClass: soundTagMap[soundType] || "tag-gray",
+          motionTagClass: motionTagMap[motionState] || "tag-gray",
+          motionLabel: motionLabel[motionState] || "—",
+        });
+        if (eventRows.length > 10) eventRows.pop();
 
-// Poll every 3 seconds
-fetchStatus();
-setInterval(fetchStatus, 3000);
-</script>
-</body>
+        document.getElementById("events-tbody").innerHTML = eventRows
+          .map(
+            (r) => `
+      <tr>
+        <td>${r.time}</td>
+        <td>${r.vehicleId}</td>
+        <td><span class="tag ${r.soundTagClass}">${r.soundType.replace("_", " ")}</span></td>
+        <td>${r.confidence}%</td>
+        <td><span class="tag ${r.motionTagClass}">${r.motionLabel}</span></td>
+        <td><span class="tag ${r.actionTag}">${r.action}</span></td>
+      </tr>
+    `,
+          )
+          .join("");
+      }
+
+      // ─────────────────────────────────────────────
+      // SMS panel
+      // ─────────────────────────────────────────────
+      function showSMS(vehicleId) {
+        const msg = `[BodaShield] THEFT ALERT
+Vehicle : ${vehicleId}
+Event   : Fuel siphoning detected
+Status  : Vehicle parked — no motion
+Time    : ${now()}
+
+Reply CONFIRM to acknowledge.
+Reply HELP for emergency contacts.`;
+
+        document.getElementById("sms-wrap").innerHTML = `
+      <div class="sms-wrap">
+        <div class="sms-bubble">${msg}</div>
+        <div class="sms-meta">
+          <div class="sms-ok"></div>
+          Delivered · +2547XXXXXXXX · KES 1.00 · ${now()}
+        </div>
+      </div>
+    `;
+      }
+
+      // ─────────────────────────────────────────────
+      // Core event processor — called by SSE and demo
+      // ─────────────────────────────────────────────
+      function processEvent(data) {
+        const v = vehicles[data.vehicle_id];
+        if (!v) return;
+
+        if (data.sound_type === "slosh") {
+          if (!v.motion) {
+            v.tripCount++;
+            tripCount++;
+            setMetric("m-trips", tripCount);
+          }
+          v.motion = true;
+          v.status = "moving";
+          v.lastSlosh = Date.now();
+          addEventRow(
+            data.vehicle_id,
+            "slosh",
+            data.confidence,
+            "moving",
+            "trip logged",
+            "tag-blue",
+          );
+        } else if (data.sound_type === "siphon") {
+          if (!v.motion) {
+            // Parked + siphon = theft
+            v.status = "suspect";
+            alertCount++;
+            setMetric("m-alerts", alertCount);
+
+            document.getElementById("alert-banner").classList.add("active");
+            document.getElementById("status-dot").classList.add("red");
+            document.getElementById("status-text").textContent =
+              "🚨 ALERT ACTIVE";
+            document.title = "🚨 ALERT - BodaShield";
+
+            smsCount++;
+            setMetric("m-sms", smsCount);
+            showSMS(data.vehicle_id);
+
+            addEventRow(
+              data.vehicle_id,
+              "siphon",
+              data.confidence,
+              "suspect",
+              "SMS sent",
+              "tag-red",
+            );
+
+            setTimeout(() => {
+              document
+                .getElementById("alert-banner")
+                .classList.remove("active");
+              document.getElementById("status-dot").classList.remove("red");
+              document.getElementById("status-text").textContent =
+                "ARMED - listening";
+              document.title = "BodaShield - Fleet Intelligence";
+              v.status = "parked";
+              renderVehicles();
+            }, 8000);
+          } else {
+            // Moving + siphon = road noise, ignore
+            addEventRow(
+              data.vehicle_id,
+              "siphon",
+              data.confidence,
+              "moving",
+              "ignored",
+              "tag-gray",
+            );
+          }
+        } else if (data.sound_type === "fuel_added") {
+          v.status = "parked";
+          addEventRow(
+            data.vehicle_id,
+            "fuel_added",
+            data.confidence,
+            "parked",
+            "fill logged",
+            "tag-green",
+          );
+        }
+
+        renderVehicles();
+      }
+
+      // ─────────────────────────────────────────────
+      // Motion timeout — 30s no slosh = parked
+      // ─────────────────────────────────────────────
+      setInterval(() => {
+        Object.values(vehicles).forEach((v) => {
+          if (v.motion && v.lastSlosh && Date.now() - v.lastSlosh > 30000) {
+            v.motion = false;
+            v.status = "parked";
+            renderVehicles();
+          }
+        });
+      }, 5000);
+
+      // ─────────────────────────────────────────────
+      // SSE — connects to Flask /stream
+      // ─────────────────────────────────────────────
+      function connectSSE() {
+        const es = new EventSource("/stream");
+        es.onmessage = (e) => {
+          try {
+            processEvent(JSON.parse(e.data));
+          } catch (err) {
+            console.error("SSE parse error:", err);
+          }
+        };
+        es.onerror = () =>
+          console.warn("SSE disconnected — browser will retry");
+      }
+
+      // ─────────────────────────────────────────────
+      // Demo — simulates the breadboard sequence
+      // ─────────────────────────────────────────────
+      function fireDemo() {
+        const btn = document.getElementById("demo-btn");
+        btn.disabled = true;
+        btn.textContent = "Running…";
+
+        // 1. Slosh — vehicle in motion
+        processEvent({
+          vehicle_id: "Demo Vehicle",
+          sound_type: "slosh",
+          confidence: 88,
+        });
+
+        // 2. Motion stops
+        setTimeout(() => {
+          vehicles["Demo Vehicle"].motion = false;
+          vehicles["Demo Vehicle"].status = "parked";
+          renderVehicles();
+        }, 1500);
+
+        // 3. Siphon detected while parked — alert fires
+        setTimeout(() => {
+          processEvent({
+            vehicle_id: "Demo Vehicle",
+            sound_type: "siphon",
+            confidence: 94,
+          });
+        }, 2800);
+
+        // 4. Re-enable
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = "🚨 Demo theft";
+        }, 6000);
+      }
+
+      // ─────────────────────────────────────────────
+      // Boot
+      // ─────────────────────────────────────────────
+      renderVehicles();
+      connectSSE();
+    </script>
+  </body>
 </html>
