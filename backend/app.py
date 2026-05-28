@@ -3,30 +3,20 @@ BodaShield Backend — app.py
 Run: python app.py
 """
 import os, sqlite3, logging
+import requests
+import urllib3
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from dotenv import load_dotenv
 
+# Suppress the Wi-Fi bypass warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 load_dotenv()
 
-# ── Africa's Talking SDK Setup ────────────────────────────────────────────────
-import africastalking
+OWNER_PHONE = os.getenv("OWNER_PHONE", "+254700000000")
 
-# The SDK automatically switches between Live and Sandbox based on your .env username
-import africastalking
-import os
-
-# It is best practice to let os.getenv pull these from your .env file!
-africastalking.initialize(
-    username=os.getenv("AT_USERNAME", "chemweno"),
-    api_key=os.getenv("AT_API_KEY", "your_api_key_goes_in_the_env_file")
-)
-
-# Initialize the SMS service
-sms = africastalking.SMS
-
-OWNER_PHONE = os.getenv("OWNER_PHONE", "+254797237577")
 app = Flask(__name__)
 CORS(app)
 logging.basicConfig(level=logging.INFO)
@@ -59,73 +49,53 @@ def log_event(event_type, plate, confidence=None):
         )
         db.commit()
 
+# ── The Sandbox SMS Bypass ────────────────────────────────────────────────────
+def send_sms(dynamic_message):
+    # Hardcoded back to Sandbox!
+    url = "https://api.sandbox.africastalking.com/version1/messaging"
+    
+    headers = {
+        "Accept": "application/json",
+        "apiKey": "atsk_848360bb9c713f2971bc4c3a38bdaeff3823ab43ed12ddd9451e86b9b46220adfbe522e9"
+    }
+    
+    data = {
+        "username": "sandbox", # Force sandbox username
+        "to": OWNER_PHONE,
+        "message": dynamic_message
+        # Notice: No Sender ID ("from") needed for Sandbox!
+    }
+    
+    try:
+        # verify=False punches through the hackathon Wi-Fi
+        response = requests.post(url, headers=headers, data=data, verify=False)
+        log.info("Sandbox SMS Response: %s", response.text)
+        return True
+    except Exception as e:
+        log.error("SMS failed: %s", e)
+        return False
+
 # ── API Endpoints ─────────────────────────────────────────────────────────────
 
-# 1. The custom route you requested for testing
-@app.route('/send-sms', methods=['POST'])
-def custom_send_sms():
-    data = request.get_json(force=True) or {}
-    phone_number = data.get("phoneNumber")
-
-    if not phone_number:
-        return jsonify({"message": "Phone number not found"}), 400
-
-    # SAFETY CATCH
-    phone_number = "+" + str(phone_number).strip("+")
-
-    # 1. Create the custom formatted message!
-    from datetime import datetime
-    ts = datetime.now().strftime("%H:%M")
-    
-    custom_body = (f"BodaShield Alert\n"
-                   f"Siphoning detected!\n"
-                   f"Plate: KCD 123X (TEST)\n"
-                   f"Time: {ts}\n"
-                   f"Action: Dispatch security.")
-
-    try:
-        response = sms.send(
-            # 2. Replace the old "Hello" string with our new variable
-            message=custom_body, 
-            recipients=[phone_number],
-            sender_id="AFTKNG"
-        )  
-
-        return jsonify({"status": "success", "data": response}), 200
-    except Exception as e:
-        return jsonify({"message": "An error occurred while sending SMS", "error": str(e)}), 500
-# 2. The Hardware Route (Updated to use the official SDK)
 @app.route("/fuel_alert", methods=["POST"])
 def fuel_alert():
     d = request.get_json(force=True) or {}
+    
+    # 1. Get the raw ML data
     plate = d.get("plate", "UNKNOWN")
-    conf = d.get("confidence", 0.90)
+    conf = d.get("confidence", 0.0)
+    
+    # 2. Get the DYNAMIC message from the ML team!
+    # (If they forget to send one, it uses the fallback message on the right)
+    ml_message = d.get("message", f"🚨 Default Alert: Activity on {plate}.")
     
     log.info("SIPHON ALERT | plate=%s | conf=%.2f", plate, conf)
     log_event("SIPHON", plate, conf)
     
-    ts = datetime.now().strftime("%H:%M")
-    body = (f"🚨 FUEL THEFT ALERT 🚨\n"
-            f"Vehicle: {plate}\n"
-            f"Time: {ts}\n"
-            f"Conf: {conf*100:.0f}%\n"
-            f"Check vehicle now.")
-            
-    try:
-        # Using the exact same SDK format as your custom route
-        response = sms.send(
-            message=body,
-            recipients=[OWNER_PHONE],
-            sender_id="AFTKNG"
-        )
-        log.info("SDK Response: %s", response)
-        sms_ok = True
-    except Exception as e:
-        log.error("SMS failed: %s", e)
-        sms_ok = False
+    # 3. Send whatever the ML team wrote directly to the phone
+    sms_ok = send_sms(ml_message)
     
-    return jsonify({"status": "alerted", "sms": sms_ok, "plate": plate}), 200
-
+    return jsonify({"status": "alerted", "sms": sms_ok, "plate": plate, "sent_message": ml_message}), 200
 
 @app.route("/api/fleet_status", methods=["GET"])
 def fleet_status():
@@ -144,34 +114,9 @@ def fleet_status():
         "recent_alerts": [dict(e) for e in events]
     }), 200
 
-
-@app.route("/ussd", methods=["POST", "GET"])
-def ussd():
-    text = request.values.get("text", "").strip()
-    
-    if text == "":
-        resp = "CON BodaShield Fleet Guard\n1. Check Fuel Security\n2. Today's Stats\n0. Exit"
-    elif text == "1":
-        with get_db() as db:
-            row = db.execute("SELECT ts, confidence FROM events WHERE event_type='SIPHON' ORDER BY ts DESC LIMIT 1").fetchone()
-        resp = (f"END FUEL: Last theft {row['ts']}\nConf:{row['confidence']*100:.0f}%" if row 
-                else "END FUEL: Secure\nNo theft today. System armed.")
-    elif text == "2":
-        with get_db() as db:
-            s = db.execute("SELECT COUNT(*) as c FROM events WHERE event_type='SIPHON' AND ts>date('now')").fetchone()["c"]
-        resp = f"END Today:\nTheft alerts: {s}\nAll vehicles tracked."
-    elif text == "0":
-        resp = "END Goodbye. BodaShield armed."
-    else:
-        resp = "END Invalid. Dial again."
-        
-    return resp, 200, {"Content-Type": "text/plain"}
-
-
 @app.route("/")
 def dashboard():
-    return render_template_string("<h1>BodaShield Logistics API Online</h1><p>Query /api/fleet_status for data.</p>")
-
+    return render_template("index.html")
 
 if __name__ == "__main__":
     if os.path.exists(DB_PATH):
@@ -183,9 +128,9 @@ if __name__ == "__main__":
     init_db()
     
     print("\n" + "="*50)
-    print("  BodaShield Backend - OFFICIAL SDK EDITION")
+    print("  BodaShield Backend - DYNAMIC ML SANDBOX EDITION")
     print(f"  Logistics API: http://localhost:5000/api/fleet_status")
-    print(f"  Owner SMS: {OWNER_PHONE}")
+    print(f"  Alert Phone: {OWNER_PHONE}")
     print("="*50)
     
     app.run(host="0.0.0.0", port=5000, debug=True)

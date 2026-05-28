@@ -1,133 +1,132 @@
-"""
-STEP 2 — Run after collecting audio
-Extracts features from all .wav files and builds a CSV for training.
+import os, sqlite3, logging
+import requests
+import urllib3
+from datetime import datetime
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
+from dotenv import load_dotenv
 
-Usage:
-  python 02_extract_features.py
+# Suppress the Wi-Fi bypass warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-Output:
-  data/features.csv  (one row per clip, columns = features + label)
-  data/feature_params.json  (params to use at inference time — give this to backend person)
-"""
+load_dotenv()
 
-import os
-import json
-import numpy as np
-import pandas as pd
-import librosa
-import scipy.io.wavfile as wav
-from pathlib import Path
+OWNER_PHONE = os.getenv("OWNER_PHONE", "+254700000000")
 
-SAMPLE_RATE   = 8000
-N_MFCC        = 13
-WINDOW_LEN    = 3.0        # seconds
-HOP_LENGTH    = 512
-FFT_BANDS     = [(0, 80), (80, 200), (200, 800)]   # Hz ranges
+app = Flask(__name__)
+CORS(app)
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("bodashield")
+DB_PATH = "bodashield.db"
 
-LABEL_MAP = {
-    "pump_hum": 0,
-    "slosh":    1,
-    "siphon":   2,
-    "healthy":  3,    # engine knock classifier class 0
-    "knock":    4,    # engine knock classifier class 1
-}
+# ── Database Setup ────────────────────────────────────────────────────────────
+def get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-RAW_DIR = Path("data/raw")
-OUT_CSV = Path("data/features.csv")
-OUT_PARAMS = Path("data/feature_params.json")
+def init_db():
+    with get_db() as db:
+        db.executescript("""
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts TEXT DEFAULT (datetime('now', 'localtime')),
+            event_type TEXT, 
+            plate TEXT,
+            confidence REAL
+        );
+        """)
 
+def log_event(event_type, plate, confidence=None):
+    with get_db() as db:
+        db.execute(
+            "INSERT INTO events(event_type, plate, confidence) VALUES(?, ?, ?)",
+            (event_type, plate, confidence)
+        )
+        db.commit()
 
-def hz_to_bin(hz, n_fft):
-    """Convert Hz to FFT bin index."""
-    return int(hz * n_fft / SAMPLE_RATE)
-
-def extract_features(audio: np.ndarray, sr: int) -> np.ndarray:
-    """
-    Returns a 1D feature vector of length:
-      13 MFCCs (mean) + 13 MFCCs (std)
-      + 3 bands × 2 stats (mean, std) = 6
-      Total = 32 features
-    """
-    if sr != SAMPLE_RATE:
-        audio = librosa.resample(audio, orig_sr=sr, target_sr=SAMPLE_RATE)
-
-    if audio.ndim > 1:
-        audio = audio.mean(axis=1)
-
+# ── The Sandbox SMS Bypass ────────────────────────────────────────────────────
+def send_sms(dynamic_message):
+    # Hardcoded back to Sandbox!
+    url = "https://api.sandbox.africastalking.com/version1/messaging"
     
-    audio = audio / (np.max(np.abs(audio)) + 1e-9)
-
-    # MFCCs
-    mfcc = librosa.feature.mfcc(y=audio, sr=SAMPLE_RATE, n_mfcc=N_MFCC, hop_length=HOP_LENGTH)
-    mfcc_mean = mfcc.mean(axis=1)
-    mfcc_std  = mfcc.std(axis=1)
-
-    # FFT magnitude spectrum
-    n_fft   = 512
-    spectrum = np.abs(np.fft.rfft(audio, n=n_fft))
-
-    band_features = []
-    for lo_hz, hi_hz in FFT_BANDS:
-        lo_bin = hz_to_bin(lo_hz, n_fft)
-        hi_bin = hz_to_bin(hi_hz, n_fft)
-        band   = spectrum[lo_bin:hi_bin]
-        band_features.extend([band.mean(), band.std()])
-
-    return np.concatenate([mfcc_mean, mfcc_std, band_features])
-
-def process_all():
-    rows = []
-
-    for label_dir in sorted(RAW_DIR.iterdir()):
-        if not label_dir.is_dir():
-            continue
-        label_name = label_dir.name
-        if label_name not in LABEL_MAP:
-            print(f"  ⚠ Unknown label dir '{label_name}' — skipping")
-            continue
-        label_int = LABEL_MAP[label_name]
-
-        wav_files = list(label_dir.glob("*.wav"))
-        print(f"  Processing {len(wav_files)} clips for '{label_name}' (label={label_int})")
-
-        for wav_path in wav_files:
-            try:
-                sr, data = wav.read(str(wav_path))
-                audio = data.astype(np.float32)
-                if audio.max() > 1.0:
-                    audio /= 32768.0
-                feat = extract_features(audio, sr)
-                rows.append(list(feat) + [label_int])
-            except Exception as e:
-                print(f"    ✗ {wav_path.name}: {e}")
-
-    mfcc_cols = [f"mfcc_{i}_mean" for i in range(N_MFCC)] + \
-                [f"mfcc_{i}_std"  for i in range(N_MFCC)]
-    band_cols = []
-    for lo, hi in FFT_BANDS:
-        band_cols += [f"band_{lo}_{hi}_mean", f"band_{lo}_{hi}_std"]
-    cols = mfcc_cols + band_cols + ["label"]
-
-    df = pd.DataFrame(rows, columns=cols)
-    OUT_CSV.parent.mkdir(exist_ok=True)
-    df.to_csv(OUT_CSV, index=False)
-    print(f"\n Saved {len(df)} rows → {OUT_CSV}")
-
-    params = {
-        "sample_rate":  SAMPLE_RATE,
-        "n_mfcc":       N_MFCC,
-        "window_len":   WINDOW_LEN,
-        "hop_length":   HOP_LENGTH,
-        "n_fft":        512,
-        "fft_bands":    FFT_BANDS,
-        "label_map":    {v: k for k, v in LABEL_MAP.items()},
-        "n_features":   len(cols) - 1,
+    headers = {
+        "Accept": "application/json",
+        "apiKey": os.getenv("AT_API_KEY", "your_sandbox_api_key")
     }
-    with open(OUT_PARAMS, "w") as f:
-        json.dump(params, f, indent=2)
-    print(f" Saved feature params → {OUT_PARAMS}")
-    print(f"\n Give feature_params.json to the backend person.")
+    
+    data = {
+        "username": "sandbox", # Force sandbox username
+        "to": OWNER_PHONE,
+        "message": dynamic_message
+        # Notice: No Sender ID ("from") needed for Sandbox!
+    }
+    
+    try:
+        # verify=False punches through the hackathon Wi-Fi
+        response = requests.post(url, headers=headers, data=data, verify=False)
+        log.info("Sandbox SMS Response: %s", response.text)
+        return True
+    except Exception as e:
+        log.error("SMS failed: %s", e)
+        return False
+
+# ── API Endpoints ─────────────────────────────────────────────────────────────
+
+@app.route("/fuel_alert", methods=["POST"])
+def fuel_alert():
+    d = request.get_json(force=True) or {}
+    
+    # 1. Get the raw ML data
+    plate = d.get("plate", "UNKNOWN")
+    conf = d.get("confidence", 0.0)
+    
+    # 2. Get the DYNAMIC message from the ML team!
+    # (If they forget to send one, it uses the fallback message on the right)
+    ml_message = d.get("message", f"🚨 Default Alert: Activity on {plate}.")
+    
+    log.info("SIPHON ALERT | plate=%s | conf=%.2f", plate, conf)
+    log_event("SIPHON", plate, conf)
+    
+    # 3. Send whatever the ML team wrote directly to the phone
+    sms_ok = send_sms(ml_message)
+    
+    return jsonify({"status": "alerted", "sms": sms_ok, "plate": plate, "sent_message": ml_message}), 200
+
+@app.route("/api/fleet_status", methods=["GET"])
+def fleet_status():
+    with get_db() as db:
+        events = db.execute(
+            "SELECT ts, plate, confidence FROM events WHERE event_type='SIPHON' ORDER BY ts DESC LIMIT 10"
+        ).fetchall()
+        
+        today_thefts = db.execute(
+            "SELECT COUNT(*) as count FROM events WHERE event_type='SIPHON' AND ts > date('now')"
+        ).fetchone()["count"]
+
+    return jsonify({
+        "status": "active",
+        "today_siphon_alerts": today_thefts,
+        "recent_alerts": [dict(e) for e in events]
+    }), 200
+
+@app.route("/")
+def dashboard():
+    return render_template("index.html")
 
 if __name__ == "__main__":
-    print("\n BodaShield — Feature Extraction\n")
-    process_all()
+    if os.path.exists(DB_PATH):
+        try:
+            os.remove(DB_PATH)
+        except OSError:
+            pass
+
+    init_db()
+    
+    print("\n" + "="*50)
+    print("  BodaShield Backend - DYNAMIC ML SANDBOX EDITION")
+    print(f"  Logistics API: http://localhost:5000/api/fleet_status")
+    print(f"  Alert Phone: {OWNER_PHONE}")
+    print("="*50)
+    
+    app.run(host="0.0.0.0", port=5000, debug=True)
